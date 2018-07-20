@@ -1,28 +1,53 @@
-machine:
-  environment:
-    CIRCLE_BUILD_DIR: $HOME/$CIRCLE_PROJECT_REPONAME
-    PATH: $PATH:$CIRCLE_BUILD_DIR/bin:${HOME}/${CIRCLE_PROJECT_REPONAME}/node_modules/.bin"
-
-  post:
-    - mkdir -p $CIRCLE_BUILD_DIR/bin
-  node:
-    version: 8.9.1
-
-dependencies:
-  pre:
-    - go get -v github.com/bep/s3deploy
-  override:
-    - yarn
-  cache_directories:
-    - ~/.cache/yarn
-    - bin
-
-test:
-  override
-    - yarn run build
-
-deployment:
-  s3up:
-    branch: master
-    commands:
-      - s3deploy -source=dist/ -region=us-east-1 -bucket=personal-site-portal
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/node:8.11.2
+    parallelism: 1
+    working_directory: ~/fmurray/personal-site-portal
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/fmurray/personal-site-portal
+      - restore_cache:
+          key: v1-npm-{{ checksum "package.lock" }}
+      - run: npm install
+      - save_cache:
+          key: v1-npm-{{ checksum "package.lock" }}
+          paths:
+            - ./node_modules
+      - run: npm run build
+      - persist_to_workspace:
+          root: .
+          paths: dist
+  deploy:
+    docker:
+      - image: circleci/golang:1.9.6
+    parallelism: 1
+    working_directory: ~/fmurray/personal-site-portal
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/fmurray/personal-site-portal
+      - restore_cache:
+          key: v1-pkg-cache
+      - run: go get -v github.com/bep/s3deploy
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - /go/pkg
+      - run:
+          name: Deploy to S3
+          command: |
+            s3deploy -source=dist/ -region=us-east-1 -bucket=personal-site-portal
+  workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
