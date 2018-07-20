@@ -10,10 +10,10 @@ jobs:
       - attach_workspace:
           at: ~/fmurray/personal-site-portal
       - restore_cache:
-          key: v1-npm-{{ checksum "package.lock" }}
+          key: v1-npm-{{ checksum "package-lock.json" }}
       - run: npm install
       - save_cache:
-          key: v1-npm-{{ checksum "package.lock" }}
+          key: v1-npm-{{ checksum "package-lock.json" }}
           paths:
             - ./node_modules
       - run: npm run build
