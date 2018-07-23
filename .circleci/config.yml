@@ -39,7 +39,7 @@ jobs:
       - run:
           name: Deploy to S3
           command: |
-            s3deploy -source=dist/ -region=us-east-1 -bucket=personal-site-portal
+            s3deploy -source=dist/ -region=us-east-1 -bucket=foroak.com
 workflows:
   version: 2
   build-and-deploy:
